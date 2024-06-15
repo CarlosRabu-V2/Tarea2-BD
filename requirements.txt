@@ -1,9 +1,4 @@
-sudo apt install unzip
-curl -fsSL https://bun.sh/install | bash
-source ~/.bashrc
-curl https://bun.sh/install | bash
-source ~/.bashrc
+powershell -c "irm bun.sh/install.ps1 | iex"
 bun add prisma @prisma/client
 bun x prisma init --datasource-provider postgresql
-sudo apt install python-pip
-pip install requests
+bun add elysia
