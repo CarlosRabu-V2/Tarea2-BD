@@ -1,7 +1,1 @@
-powershell -c "irm bun.sh/install.ps1 | iex"
-bun add prisma @prisma/client
-bun x prisma init --datasource-provider postgresql
-bun add elysia
-bun x prisma migrate dev --name init
-bun x prisma generate 
-bun run server.ts
+pip install request
