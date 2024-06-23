@@ -1,5 +1,7 @@
 import requests
 import getpass
+import json
+from datetime import datetime
 
 BASE_URL = "http://localhost:3000"
 
@@ -23,7 +25,11 @@ def registrar_usuario():
     if response.status_code == 200:
         print("Usuario registrado exitosamente")
         print("Respuesta del servidor:", response.json())
-    if response.status_code == 201:
+    elif response.status_code == 500:
+        print("Usuario ya registrado")
+        print("Respuesta del servidor:", response.json())
+        
+    elif response.status_code == 201:
         print("Usuario registrado exitosamente")
         print("Respuesta del servidor:", response.json())
     else:
@@ -130,51 +136,13 @@ def desmarcar_correo_como_favorito():
         "id_correo_favorito": int(id_correo_favorito)
     }
     
-    response = requests.delete(f"{BASE_URL}/api/desmarcarcorreo", json=data, headers=headers)
+    response = requests.post(f"{BASE_URL}/api/desmarcarcorreo", json=data, headers=headers)
     
-    if response.status_code == 200:
-        print("Correo desmarcado como favorito exitosamente")
-        print("Respuesta del servidor:", response.json())
-    elif response.status_code == 201:
+    if response.status_code in [200, 201]:
         print("Correo desmarcado como favorito exitosamente")
         print("Respuesta del servidor:", response.json())
     else:
         print("Error al desmarcar el correo como favorito")
-        print("Código de estado:", response.status_code)
-        try:
-            id_correo_favorito = int(id_correo_favorito)
-        except ValueError:
-            print("ID del correo favorito debe ser un número entero")
-    return
-
-def enviar_correo():
-    correo = input("Ingrese su correo: ")
-    clave = getpass.getpass("Ingrese su clave: ")
-    destinatario = input("Ingrese destinatario: ")
-    asunto = input("Ingrese asunto: ")
-    contenido = input("Ingrese contenido: ")
-
-    headers = {
-        "Content-Type": "application/json"
-    }
-    data = {
-        "remitente": correo,
-        "clave": clave,
-        "destinatario": destinatario,
-        "asunto": asunto,
-        "contenido": contenido
-    }
-    
-    response = requests.post(f"{BASE_URL}/api/enviarcorreo", json=data, headers=headers)
-    
-    if response.status_code == 200:
-        print("Correo enviado exitosamente")
-        print("Respuesta del servidor:", response.json())
-    elif response.status_code == 201:
-        print("Correo enviado exitosamente")
-        print("Respuesta del servidor:", response.json())
-    else:
-        print("Error al enviar el correo")
         print("Código de estado:", response.status_code)
         try:
             print("Respuesta del servidor:", response.json())
@@ -182,10 +150,35 @@ def enviar_correo():
             print("No se pudo decodificar la respuesta del servidor")
     return
 
+
+
+def verificar_usuario():
+    correo=input("Ingrese correo:")
+    headers = {
+        "Content-Type": "application/json"
+    }
+    try: 
+        response = requests.get(BASE_URL ,  headers=headers)
+        if response.status_code == 200:
+            print("Correo si existe")
+            
+            return True
+        elif response.status_code == 404:
+            print("Correo no existe")
+            print("Respuesta del servidor:", response.json())
+            return False
+        else:
+            print("Error al verificar el usuario:", response.json())
+            return False
+    except Exception as e:
+        print("Error al realizar la solicitud:", str(e))
+        return False
+    
 def main():
+    registrar_usuario()
     while True:
         print("Menú de opciones:")
-        print("1. Registrar un usuario")
+        print("1. Registrar un nuevo usuario")
         print("2. Enviar un correo")
         print("3. Bloquear un usuario")
         print("4. Ver información de una dirección de correo electrónico")
@@ -198,7 +191,7 @@ def main():
         if option == "1":
             registrar_usuario()
         elif option == "2":
-            enviar_correo()
+            print("opción no disponible")
         elif option == "3":
             bloquear_usuario()
         elif option == "4":
@@ -210,6 +203,7 @@ def main():
         elif option == "7":
             print("Terminando la ejecución del cliente")
             break
+
         else:
             print("Opción no válida, intenta nuevamente")
 

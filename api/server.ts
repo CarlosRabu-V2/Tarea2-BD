@@ -4,12 +4,13 @@ import { PrismaClient } from '@prisma/client';
 const app = new Elysia();
 const prisma = new PrismaClient();
 
-
 interface bloquear_usuario {
-  correo: string;
-  clave: string;
-  correo_bloquear: string;
+    correo: string;
+    clave: string;
+    correo_bloquear: string;
 }
+
+
 
 app.post('/api/registrar', async (req) => {
     try {
@@ -20,6 +21,26 @@ app.post('/api/registrar', async (req) => {
             descripcion?: string;
         };
 
+        if (!nombre || !direccion_correo || !clave) {
+            return {
+                status: 400,
+                body: {
+                    estado: 400,
+                    mensaje: 'Ha existido un error al realizar la petición: Todos los campos obligatorios (nombre, direccion_correo, clave) deben ser proporcionados'
+                }
+            };
+        }
+
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(direccion_correo)) {
+            return {
+                status: 400,
+                body: {
+                    estado: 400,
+                    mensaje: 'Ha existido un error al realizar la petición: El formato del correo electrónico no es válido'
+                }
+            };
+        }
+
         const nuevoUsuario = await prisma.usuario.create({
             data: {
                 nombre,
@@ -27,32 +48,50 @@ app.post('/api/registrar', async (req) => {
                 clave,
                 descripcion,
                 fecha_creacion: new Date(),
-                fuente_preferida: null,
             },
         });
 
         return {
             status: 201,
-            body: { message: 'Usuario registrado exitosamente', usuario: nuevoUsuario }
+            body: {
+                estado: 201,
+                mensaje: 'Se realizó la petición correctamente',
+                usuario: nuevoUsuario
+            }
         };
     } catch (error) {
         console.error(error);
 
-        let errorMessage = 'Ocurrió un error al registrar el usuario';
+        let errorMessage = 'Ha existido un error al realizar la petición';
         if (error.code === 'P2002') {
-            errorMessage = 'El correo electrónico ya está registrado';
+            errorMessage = 'Ha existido un error al realizar la petición: El correo electrónico ya está registrado';
+        } else {
+            errorMessage = `Ha existido un error al realizar la petición: ${error.message}`;
         }
 
         return {
             status: 500,
-            body: { error: errorMessage }
+            body: {
+                estado: 500,
+                mensaje: errorMessage
+            }
         };
     }
 });
 
-app.post('/api/bloquear', async (req) =>{
-    try{
+app.post('/api/bloquear', async (req) => {
+    try {
         const { correo, clave, correo_bloquear } = req.body as bloquear_usuario;
+
+        if (!correo || !clave || !correo_bloquear) {
+            return {
+                status: 400,
+                body: {
+                    estado: 400,
+                    mensaje: 'Ha existido un error al realizar la petición: Todos los campos obligatorios (correo, clave, correo_bloquear) deben ser proporcionados'
+                }
+            };
+        }
 
         const admin = await prisma.usuario.findUnique({
             where: {
@@ -62,13 +101,16 @@ app.post('/api/bloquear', async (req) =>{
 
         if (!admin || admin.clave !== clave) {
             return {
-                status: 400,
-                body: {message: "Error"}
+                status: 401,
+                body: {
+                    estado: 401,
+                    mensaje: "Ha existido un error al realizar la petición: Credenciales incorrectas"
+                }
             };
         }
 
         const bloqueado = await prisma.direccion_bloqueada.create({
-            data:{
+            data: {
                 usuario_id: admin.id,
                 direccion_bloqueada: correo_bloquear,
                 fecha_bloqueo: new Date(),
@@ -78,13 +120,19 @@ app.post('/api/bloquear', async (req) =>{
         console.log(`[${new Date().toISOString()}] Dirección bloqueada: ${correo_bloquear} por usuario ${correo}`);
         return {
             status: 200,
-            body: { message: "Dirección bloqueada" }
+            body: {
+                estado: 200,
+                mensaje: "Se realizó la petición correctamente"
+            }
         };
     } catch (error) {
         console.error(error);
         return {
             status: 500,
-            body: { message: "Error"}
+            body: {
+                estado: 500,
+                mensaje: "Ha existido un error al realizar la petición: Error al bloquear la dirección"
+            }
         };
     }
 });
@@ -92,6 +140,16 @@ app.post('/api/bloquear', async (req) =>{
 app.get('/api/informacion/:correo', async (req) => {
     try {
         const correo = req.params.correo;
+
+        if (!correo) {
+            return {
+                status: 400,
+                body: { 
+                    estado: 400,
+                    mensaje: "Ha existido un error al realizar la petición: El correo es obligatorio"
+                }
+            };
+        }
 
         const usuario = await prisma.usuario.findUnique({
             where: {
@@ -107,14 +165,16 @@ app.get('/api/informacion/:correo', async (req) => {
         if (!usuario) {
             return {
                 status: 404,
-                body: { message: "Usuario no encontrado" }
+                body: { 
+                    estado: 404,
+                    mensaje: "Ha existido un error al realizar la petición: Usuario no encontrado"
+                }
             };
         }
 
         return {
             status: 200,
             body: {
-                estado: 200,
                 nombre: usuario.nombre,
                 correo: usuario.direccion_correo,
                 descripcion: usuario.descripcion || "Sin descripción"
@@ -124,7 +184,10 @@ app.get('/api/informacion/:correo', async (req) => {
         console.error(error);
         return {
             status: 500,
-            body: { message: 'Error al obtener la información del usuario' }
+            body: {
+                estado: 500,
+                mensaje: 'Ha existido un error al realizar la petición: Error al obtener la información del usuario'
+            }
         };
     }
 });
@@ -137,6 +200,16 @@ app.post('/api/marcarcorreo', async (req) => {
             id_correo_favorito: number;
         };
 
+        if (!correo || !clave || !id_correo_favorito) {
+            return {
+                status: 400,
+                body: {
+                    estado: 400,
+                    mensaje: 'Ha existido un error al realizar la petición: Todos los campos obligatorios (correo, clave, id_correo_favorito) deben ser proporcionados'
+                }
+            };
+        }
+
         const usuario = await prisma.usuario.findUnique({
             where: {
                 direccion_correo: correo,
@@ -145,8 +218,11 @@ app.post('/api/marcarcorreo', async (req) => {
 
         if (!usuario || usuario.clave !== clave) {
             return {
-                status: 400,
-                body: { message: "Error" }
+                status: 401,
+                body: {
+                    estado: 401,
+                    mensaje: "Ha existido un error al realizar la petición: Credenciales incorrectas"
+                }
             };
         }
 
@@ -161,13 +237,20 @@ app.post('/api/marcarcorreo', async (req) => {
 
         return {
             status: 200,
-            body: { message: "Correo marcado como favorito", correoFavorito }
+            body: {
+                estado: 200,
+                mensaje: "Se realizó la petición correctamente",
+                correoFavorito
+            }
         };
     } catch (error) {
         console.error(error);
         return {
             status: 500,
-            body: { message: 'Error al marcar el correo como favorito' }
+            body: {
+                estado: 500,
+                mensaje: 'Ha existido un error al realizar la petición: Error al marcar el correo como favorito'
+            }
         };
     }
 });
@@ -180,6 +263,16 @@ app.post('/api/desmarcarcorreo', async (req) => {
             id_correo_favorito: number;
         };
 
+        if (!correo || !clave || !id_correo_favorito) {
+            return {
+                status: 400,
+                body: {
+                    estado: 400,
+                    mensaje: 'Ha existido un error al realizar la petición: Todos los campos obligatorios (correo, clave, id_correo_favorito) deben ser proporcionados'
+                }
+            };
+        }
+
         const usuario = await prisma.usuario.findUnique({
             where: {
                 direccion_correo: correo,
@@ -188,8 +281,11 @@ app.post('/api/desmarcarcorreo', async (req) => {
 
         if (!usuario || usuario.clave !== clave) {
             return {
-                status: 400,
-                body: { message: "Error" }
+                status: 401,
+                body: {
+                    estado: 401,
+                    mensaje: "Ha existido un error al realizar la petición: Credenciales incorrectas"
+                }
             };
         }
 
@@ -204,23 +300,53 @@ app.post('/api/desmarcarcorreo', async (req) => {
 
         return {
             status: 200,
-            body: { message: "Correo desmarcado", correoFavorito }
+            body: {
+                estado: 200,
+                mensaje: "Se realizó la petición correctamente",
+                correoFavorito
+            }
         };
     } catch (error) {
         console.error(error);
         return {
             status: 500,
-            body: { message: 'Error al desmarcar el correo como favorito' }
+            body: {
+                estado: 500,
+                mensaje: 'Ha existido un error al realizar la petición: Error al desmarcar el correo como favorito'
+            }
         };
     }
 });
 
+app.get('/api/verificar-usuario/:correo', async (req, res) => {
+    try {
+        const correo = req.params.correo;
+
+        const usuario = await prisma.usuario.findUnique({
+            where: {
+                direccion_correo: correo,
+            },
+        });
+
+        if (!usuario) {
+            return res.status(404).json({ message: "Usuario no encontrado" });
+        }
+
+        return res.status(200).json({ message: "Usuario encontrado" });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Error al verificar el usuario' });
+    }
+});
+
+
+
 app.get('/', () => {
-    return 'Alabado sea Dios';
+    return 'El servidor esta funcionando correctamente';
 });
 
 
 app.listen(3000, () => {
-    console.log('Server running on http://localhost:3000');
+    console.log('El server esta funcionando en http://localhost:3000');
 });
 

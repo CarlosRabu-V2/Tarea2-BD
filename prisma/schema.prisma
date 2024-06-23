@@ -13,78 +13,38 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model version_software {
-  id                Int      @id @default(autoincrement())
-  nombre_version     String
-  fecha_lanzamiento  DateTime
-  usuario_asociado_id Int?
+model usuario {
+  id                Int       @id @default(autoincrement())
+  direccion_correo  String    @unique
+  nombre            String
+  clave             String
+  descripcion       String?
+  fecha_creacion    DateTime
+
+  correos_enviados  correo[]  @relation("remitente")
+  correos_recibidos correo[]  @relation("destinatario")
+  direcciones_bloqueadas direccion_bloqueada[]
 }
 
 model correo {
   id               Int       @id @default(autoincrement())
-  remitente_id      Int
-  destinatario_id   Int
+  remitente_id     Int
+  destinatario_id  Int
   asunto           String
   cuerpo           String
-  fecha_envio       DateTime
-  leido            Boolean
-  es_favorito       Boolean
-  color_fondo       String?
-  animacion_id      Int?
-  publicidad_id     Int?
-}
+  fecha_envio      DateTime
+  es_favorito      Boolean
 
-model animacion {
-  id               Int       @id @default(autoincrement())
-  nombre           String
-  duracion_segundos Int
-}
-
-model plugin_correo {
-  id                Int      @id @default(autoincrement())
-  nombre_plugin      String
-  correos_afectados  String?
-  idiomas_soportados String
-  estilo_firma_id     Int?
-}
-
-model usuario {
-  id                Int      @id @default(autoincrement())
-  direccion_correo   String  @unique
-  nombre           String
-  clave            String
-  descripcion       String?
-  fecha_creacion     DateTime
-  fuente_preferida   String?
-}
-
-model publicidad {
-  id               Int       @id @default(autoincrement())
-  contenido_anuncio  String
-  fecha_mostrado     DateTime
-  usuario_id         Int?
-  animacion_id       Int?
+  remitente        usuario   @relation("remitente", fields: [remitente_id], references: [id])
+  destinatario     usuario   @relation("destinatario", fields: [destinatario_id], references: [id])
 }
 
 model direccion_bloqueada {
   usuario_id          Int
   direccion_bloqueada String
   fecha_bloqueo       DateTime
-  version_softwareId  Int?
+
+  usuario             usuario  @relation(fields: [usuario_id], references: [id])
+
   @@id([usuario_id, direccion_bloqueada])
-}
-
-model direccion_favorita {
-  usuario_id         Int
-  direccion_favorita String
-  fecha_agregado     DateTime
-  categoria         String?
-  @@id([usuario_id, direccion_favorita])
-}
-
-model tema_correo {
-  id               Int       @id @default(autoincrement())
-  nombre_tema       String
-  usuario_creador_id Int
-  plugin_correo_id   Int?
 }
